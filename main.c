@@ -17,7 +17,6 @@
 static volatile int capture_stop = 0;
 static unsigned long long samplecount = 0;
 static int out_fd;
-static int gqrx = 0;
 
 typedef struct {
 	float i;
@@ -50,43 +49,10 @@ void write_x64(int fd, sample_t *samples, unsigned count)
 			write(fd, buf, sizeof(buf[0])*i);
 	}
 }
-void write_c64(int fd, sample_t *samples, unsigned count)
-{
-	unsigned int i;
-	static c64_t buf[0x1000];
-
-	i = 0;
-	while (i<count)
-	{
-		buf[i&0xfff].i = (float)(samples[i].i)/2048.f;
-		buf[i&0xfff].q = (float)(samples[i].q)/2048.f;
-		i++;
-		if (!(i&0xfff))
-		{
-			write(fd, buf, sizeof(buf));
-		}
-	}
-	i&=0xfff;
-	if(i)
-	{
-			write(fd, buf, sizeof(buf[0])*i);
-	}
-}
 
 int iq_cb(pluto_t UNUSED *p, sample_t *samples, unsigned count)
 {
-#if 0
-	unsigned i;
-
-	for (i=0;i<count;i++)
-	{
-		printf("%d, %d\n", samples[i].i, samples[i].q);
-	}
-#endif
-	if (gqrx)
-		write_x64(out_fd, samples, count);
-	else
-		write_c64(out_fd, samples, count);
+	write_x64(out_fd, samples, count);
 	samplecount += count;
 
 	return capture_stop;
@@ -97,7 +63,6 @@ static struct option long_options[] = {
 	{"samplerate",	required_argument, 0, 's'}, 
 	{"output-file",	required_argument, 0, 'o'}, 
 	{"gain",	required_argument, 0, 'g'}, 
-	{"gqrx-format",	no_argument, 0, 'x'}, 
 };
 
 void usage(char*s)
@@ -141,9 +106,6 @@ int main(int argc, char **argv)
 			break;
 		case 'g':
 			gain = strtol(optarg, NULL, 10);
-			break;
-		case 'x':
-			gqrx = 1;
 			break;
 		case '?':
 			usage(*argv);
