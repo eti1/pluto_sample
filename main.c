@@ -91,7 +91,7 @@ int main(int argc, char **argv)
 	char *filename = NULL;
 	pluto_t *pluto;
 
-	while ((c = getopt_long(argc, argv, "f:s:o:g:x",long_options, &option_index)) != -1)
+	while ((c = getopt_long(argc, argv, "f:s:o:g",long_options, &option_index)) != -1)
 	{
 		switch(c)
 		{
