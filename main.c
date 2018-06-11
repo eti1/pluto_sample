@@ -48,6 +48,7 @@ void write_x64(int fd, sample_t *samples, unsigned count)
 	{
 			write(fd, buf, sizeof(buf[0])*i);
 	}
+	samplecount += count;
 }
 
 int iq_cb(pluto_t UNUSED *p, sample_t *samples, unsigned count)
@@ -91,7 +92,7 @@ int main(int argc, char **argv)
 	char *filename = NULL;
 	pluto_t *pluto;
 
-	while ((c = getopt_long(argc, argv, "f:s:o:g",long_options, &option_index)) != -1)
+	while ((c = getopt_long(argc, argv, "f:s:o:g:",long_options, &option_index)) != -1)
 	{
 		switch(c)
 		{
@@ -121,7 +122,7 @@ int main(int argc, char **argv)
 		usage(*argv);
 	}
 
-	if((out_fd = open(filename, O_WRONLY|O_CREAT,0660))<0)
+	if((out_fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC,0660))<0)
 	{
 		perror("open");
 		return 1;
