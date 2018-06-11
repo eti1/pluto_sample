@@ -130,20 +130,55 @@ int pluto_set_rx(pluto_t *p)
 	return 0;
 }
 
+
+char *pluto_scan(void)
+{
+	struct iio_scan_context *ctx;
+	struct iio_context_info **list;
+	ssize_t list_size, i;
+	const char *desc, *uri;
+	char *retval = NULL;
+
+	if ((ctx = iio_create_scan_context("usb", 0)))
+	{
+		if((list_size=iio_scan_context_get_info_list (ctx, &list)) >= 0)
+		{
+			for(i=0;i<list_size && !retval ;i++)
+			{
+				desc = iio_context_info_get_description(list[i]);
+				uri = iio_context_info_get_uri(list[i]);
+				if (strstr(desc, "PlutoSDR"))
+				{
+					printf("Using '%s' : %s\n", uri, desc);
+					retval = strdup(uri);
+				}
+			}
+			iio_context_info_list_free(list);
+		}
+		iio_scan_context_destroy(ctx);
+	}
+	return retval;
+}
+
 pluto_t* pluto_create(
 	unsigned long frequency, 
 	unsigned long samplerate,
-	int gain)
+	int gain,
+	char *uri)
 {
 	int rc;
 	pluto_t *p;
+
+	if (!uri)
+		uri = PLUTO_DEF_URI;
 
 	if (!(p = (pluto_t*)malloc(sizeof(*p))))
 		return NULL;
 	memset(p, 0, sizeof(*p));
 
-	if(!(p->ctx = iio_create_default_context())
-	&& !(p->ctx = iio_create_network_context("pluto.local")))
+	/* Create context */
+	printf("Creating context with uri %s\n", uri);
+	if(!(p->ctx = iio_create_context_from_uri(uri)))
 	{
 		fprintf(stderr,"Unable to create context\n");
 		goto err;
@@ -185,9 +220,10 @@ pluto_t* pluto_create(
 	if ((rc=pluto_set_gain(p, gain)))
 		goto err;
 
-	printf("* Creating non-cyclic IIO buffers \n");
+	printf("* Creating non-cyclic IIO buffers (%d)\n", PLUTO_DATA_LEN/2);
 
 	p->rxbuf=iio_device_create_buffer(p->dev, PLUTO_DATA_LEN/2, false);
+	p->fd = iio_buffer_get_poll_fd(p->rxbuf);
 
 	if (!p->rxbuf) {
 		perror("Could not create RX buffer");
@@ -206,9 +242,11 @@ void pluto_stream(pluto_t *p, pluto_data_cb_t hdlr)
 
 	do
 	{
+		//printf("refill?");
 		iio_buffer_refill(p->rxbuf);
 		start = iio_buffer_first(p->rxbuf, p->rx_i);
 		end = iio_buffer_end(p->rxbuf);
+		//printf("hdlr %d samples\n", ((unsigned)(end-start))/sizeof(sample_t));
 		rc=hdlr(p, (sample_t*)start, ((unsigned)(end-start))/sizeof(sample_t));
 	} while(!rc);
 }

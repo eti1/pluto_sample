@@ -23,6 +23,7 @@ typedef struct {
 	struct iio_channel *rx_i;
 	struct iio_channel *rx_q;
 	struct iio_buffer  *rxbuf;
+	int fd;
 } pluto_t;
 
 typedef struct {
@@ -32,13 +33,22 @@ typedef struct {
 
 typedef int (*pluto_data_cb_t)(pluto_t *p, sample_t *samples, unsigned count);
 
-#define PLUTO_DATA_LEN             (16*16384)   /* 256k */
+//#define PLUTO_DATA_LEN             (16*16384)   /* 256k */
+#define PLUTO_DATA_LEN             (64*16384)   /* 256k */
 #define PLUTO_MAX_GAIN				70
 
-pluto_t* pluto_create(unsigned long frequency, unsigned long samplerate, gain_t gain);
+#define PLUTO_DEF_URI "ip:pluto.local"
+
+pluto_t* pluto_create(
+	unsigned long frequency,
+	unsigned long samplerate,
+	gain_t gain,
+	char *uri
+);
 void pluto_delete(pluto_t*p);
 int pluto_set_freq(pluto_t *p, unsigned long frequency);
 
 void pluto_stream(pluto_t *p, pluto_data_cb_t hdlr);
+char *pluto_scan(void);
 
 #endif
